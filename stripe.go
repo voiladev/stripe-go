@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/stripe/stripe-go/v79/form"
+	"github.com/voiladev/stripe-go/v79/form"
 )
 
 //
@@ -461,7 +461,11 @@ func (s *BackendImplementation) NewRequest(method, path, key, contentType string
 	// Body is set later by `Do`.
 	req, err := http.NewRequest(method, path, nil)
 	if err != nil {
-		s.LeveledLogger.Errorf("Cannot create Stripe request: %v", err)
+		var ctx context.Context
+		if params != nil && params.Context != nil {
+			ctx = params.Context
+		}
+		s.LeveledLogger.Errorf(ctx, "Cannot create Stripe request: %v", err)
 		return nil, err
 	}
 
@@ -512,7 +516,7 @@ func (s *BackendImplementation) maybeSetTelemetryHeader(req *http.Request) {
 			if err == nil {
 				req.Header.Set("X-Stripe-Client-Telemetry", string(metricsJSON))
 			} else {
-				s.LeveledLogger.Warnf("Unable to encode client telemetry: %v", err)
+				s.LeveledLogger.Warnf(req.Context(), "Unable to encode client telemetry: %v", err)
 			}
 		default:
 			// There are no metrics available, so don't send any.
@@ -601,7 +605,8 @@ func (s *BackendImplementation) requestWithRetriesAndTelemetry(
 	body *bytes.Buffer,
 	handleResponse func(*http.Response, error) (interface{}, error),
 ) (*http.Response, interface{}, *time.Duration, error) {
-	s.LeveledLogger.Infof("Requesting %v %v%v", req.Method, req.URL.Host, req.URL.Path)
+	ctx := req.Context()
+	s.LeveledLogger.Infof(ctx, "Requesting %v %v%v", req.Method, req.URL.Host, req.URL.Path)
 	s.maybeSetTelemetryHeader(req)
 	var resp *http.Response
 	var err error
@@ -614,7 +619,7 @@ func (s *BackendImplementation) requestWithRetriesAndTelemetry(
 		resp, err = s.HTTPClient.Do(req)
 
 		requestDuration = time.Since(start)
-		s.LeveledLogger.Infof("Request completed in %v (retry: %v)", requestDuration, retry)
+		s.LeveledLogger.Infof(ctx, "Request completed in %v (retry: %v)", requestDuration, retry)
 
 		result, err = handleResponse(resp, err)
 
@@ -623,14 +628,14 @@ func (s *BackendImplementation) requestWithRetriesAndTelemetry(
 		shouldRetry, noRetryReason := s.shouldRetry(err, req, resp, retry)
 
 		if !shouldRetry {
-			s.LeveledLogger.Infof("Not retrying request: %v", noRetryReason)
+			s.LeveledLogger.Infof(ctx, "Not retrying request: %v", noRetryReason)
 			break
 		}
 
 		sleepDuration := s.sleepTime(retry)
 		retry++
 
-		s.LeveledLogger.Warnf("Initiating retry %v for request %v %v%v after sleeping %v",
+		s.LeveledLogger.Warnf(ctx, "Initiating retry %v for request %v %v%v after sleeping %v",
 			retry, req.Method, req.URL.Host, req.URL.Path, sleepDuration)
 
 		time.Sleep(sleepDuration)
@@ -643,7 +648,7 @@ func (s *BackendImplementation) requestWithRetriesAndTelemetry(
 	return resp, result, &requestDuration, nil
 }
 
-func (s *BackendImplementation) logError(statusCode int, err error) {
+func (s *BackendImplementation) logError(ctx context.Context, statusCode int, err error) {
 	if stripeErr, ok := err.(*Error); ok {
 		// The Stripe API makes a distinction between errors that were
 		// caused by invalid parameters or something else versus those
@@ -659,14 +664,14 @@ func (s *BackendImplementation) logError(statusCode int, err error) {
 		// Stripe API doesn't comply to the letter of the specification
 		// and uses it in a broader sense.
 		if statusCode == 402 {
-			s.LeveledLogger.Infof("User-compelled request error from Stripe (status %v): %v",
+			s.LeveledLogger.Infof(ctx, "User-compelled request error from Stripe (status %v): %v",
 				statusCode, stripeErr.redact())
 		} else {
-			s.LeveledLogger.Errorf("Request error from Stripe (status %v): %v",
+			s.LeveledLogger.Errorf(ctx, "Request error from Stripe (status %v): %v",
 				statusCode, stripeErr.redact())
 		}
 	} else {
-		s.LeveledLogger.Errorf("Error decoding error from Stripe: %v", err)
+		s.LeveledLogger.Errorf(ctx, "Error decoding error from Stripe: %v", err)
 	}
 }
 
@@ -675,11 +680,12 @@ func (s *BackendImplementation) logError(statusCode int, err error) {
 // a StreamingLastResponse onto v, but in unsuccessful cases handles unmarshaling
 // errors returned by the API.
 func (s *BackendImplementation) DoStreaming(req *http.Request, body *bytes.Buffer, v StreamingLastResponseSetter) error {
+	ctx := req.Context()
 	handleResponse := func(res *http.Response, err error) (interface{}, error) {
 
 		// Some sort of connection error
 		if err != nil {
-			s.LeveledLogger.Errorf("Request failed with error: %v", err)
+			s.LeveledLogger.Errorf(ctx, "Request failed with error: %v", err)
 			return res.Body, err
 		}
 
@@ -694,9 +700,9 @@ func (s *BackendImplementation) DoStreaming(req *http.Request, body *bytes.Buffe
 		resBody, err = ioutil.ReadAll(res.Body)
 		res.Body.Close()
 		if err == nil {
-			err = s.ResponseToError(res, resBody)
+			err = s.ResponseToError(ctx, res, resBody)
 		} else {
-			s.logError(res.StatusCode, err)
+			s.logError(ctx, res.StatusCode, err)
 		}
 
 		return res.Body, err
@@ -714,6 +720,7 @@ func (s *BackendImplementation) DoStreaming(req *http.Request, body *bytes.Buffe
 // the backend's HTTP client to execute the request and unmarshals the response
 // into v. It also handles unmarshaling errors returned by the API.
 func (s *BackendImplementation) Do(req *http.Request, body *bytes.Buffer, v LastResponseSetter) error {
+	ctx := req.Context()
 	handleResponse := func(res *http.Response, err error) (interface{}, error) {
 		var resBody []byte
 		if err == nil {
@@ -722,11 +729,11 @@ func (s *BackendImplementation) Do(req *http.Request, body *bytes.Buffer, v Last
 		}
 
 		if err != nil {
-			s.LeveledLogger.Errorf("Request failed with error: %v", err)
+			s.LeveledLogger.Errorf(ctx, "Request failed with error: %v", err)
 		} else if res.StatusCode >= 400 {
-			err = s.ResponseToError(res, resBody)
+			err = s.ResponseToError(ctx, res, resBody)
 
-			s.logError(res.StatusCode, err)
+			s.logError(ctx, res.StatusCode, err)
 		}
 
 		return resBody, err
@@ -737,26 +744,26 @@ func (s *BackendImplementation) Do(req *http.Request, body *bytes.Buffer, v Last
 		return err
 	}
 	resBody := result.([]byte)
-	s.LeveledLogger.Debugf("Response: %s", string(resBody))
+	s.LeveledLogger.Debugf(ctx, "Response: %s", string(resBody))
 
-	err = s.UnmarshalJSONVerbose(res.StatusCode, resBody, v)
+	err = s.UnmarshalJSONVerbose(ctx, res.StatusCode, resBody, v)
 	v.SetLastResponse(newAPIResponse(res, resBody, requestDuration))
 	return err
 }
 
 // ResponseToError converts a stripe response to an Error.
-func (s *BackendImplementation) ResponseToError(res *http.Response, resBody []byte) error {
+func (s *BackendImplementation) ResponseToError(ctx context.Context, res *http.Response, resBody []byte) error {
 	var raw rawError
 	if s.Type == ConnectBackend {
 		// If this is an OAuth request, deserialize as Error because OAuth errors
 		// are a different shape from the standard API errors.
 		var topLevelError Error
-		if err := s.UnmarshalJSONVerbose(res.StatusCode, resBody, &topLevelError); err != nil {
+		if err := s.UnmarshalJSONVerbose(ctx, res.StatusCode, resBody, &topLevelError); err != nil {
 			return err
 		}
 		raw.Error = &topLevelError
 	} else {
-		if err := s.UnmarshalJSONVerbose(res.StatusCode, resBody, &raw); err != nil {
+		if err := s.UnmarshalJSONVerbose(ctx, res.StatusCode, resBody, &raw); err != nil {
 			return err
 		}
 	}
@@ -814,7 +821,7 @@ func (s *BackendImplementation) SetNetworkRetriesSleep(sleep bool) {
 
 // UnmarshalJSONVerbose unmarshals JSON, but in case of a failure logs and
 // produces a more descriptive error.
-func (s *BackendImplementation) UnmarshalJSONVerbose(statusCode int, body []byte, v interface{}) error {
+func (s *BackendImplementation) UnmarshalJSONVerbose(ctx context.Context, statusCode int, body []byte, v interface{}) error {
 	err := json.Unmarshal(body, v)
 	if err != nil {
 		// If we got invalid JSON back then something totally unexpected is
@@ -831,7 +838,7 @@ func (s *BackendImplementation) UnmarshalJSONVerbose(statusCode int, body []byte
 
 		newErr := fmt.Errorf("Couldn't deserialize JSON (response status: %v, body sample: '%s'): %v",
 			statusCode, bodySample, err)
-		s.LeveledLogger.Errorf("%s", newErr.Error())
+		s.LeveledLogger.Errorf(ctx, "%s", newErr.Error())
 		return newErr
 	}
 

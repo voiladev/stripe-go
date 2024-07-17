@@ -28,7 +28,7 @@ func TestLeveledLoggerDebugf(t *testing.T) {
 		clearBuffers(&stdout, &stderr)
 		logger.Level = LevelDebug
 
-		logger.Debugf("test")
+		logger.Debugf(nil, "test")
 		assert.Equal(t, "[DEBUG] test\n", stdout.String())
 		assert.Equal(t, "", stderr.String())
 	}
@@ -38,7 +38,7 @@ func TestLeveledLoggerDebugf(t *testing.T) {
 		clearBuffers(&stdout, &stderr)
 		logger.Level = level
 
-		logger.Debugf("test")
+		logger.Debugf(nil, "test")
 		assert.Equal(t, "", stdout.String())
 		assert.Equal(t, "", stderr.String())
 	}
@@ -52,7 +52,7 @@ func TestLeveledLoggerInfof(t *testing.T) {
 		clearBuffers(&stdout, &stderr)
 		logger.Level = level
 
-		logger.Infof("test")
+		logger.Infof(nil, "test")
 		assert.Equal(t, "[INFO] test\n", stdout.String())
 		assert.Equal(t, "", stderr.String())
 	}
@@ -62,7 +62,7 @@ func TestLeveledLoggerInfof(t *testing.T) {
 		clearBuffers(&stdout, &stderr)
 		logger.Level = level
 
-		logger.Infof("test")
+		logger.Infof(nil, "test")
 		assert.Equal(t, "", stdout.String())
 		assert.Equal(t, "", stderr.String())
 	}
@@ -76,7 +76,7 @@ func TestLeveledLoggerWarnf(t *testing.T) {
 		clearBuffers(&stdout, &stderr)
 		logger.Level = level
 
-		logger.Warnf("test")
+		logger.Warnf(nil, "test")
 		assert.Equal(t, "", stdout.String())
 		assert.Equal(t, "[WARN] test\n", stderr.String())
 	}
@@ -86,7 +86,7 @@ func TestLeveledLoggerWarnf(t *testing.T) {
 		clearBuffers(&stdout, &stderr)
 		logger.Level = LevelError
 
-		logger.Warnf("test")
+		logger.Warnf(nil, "test")
 		assert.Equal(t, "", stdout.String())
 		assert.Equal(t, "", stderr.String())
 	}
@@ -100,7 +100,7 @@ func TestLeveledLoggerErrorf(t *testing.T) {
 		clearBuffers(&stdout, &stderr)
 		logger.Level = level
 
-		logger.Errorf("test")
+		logger.Errorf(nil, "test")
 		assert.Equal(t, "", stdout.String())
 		assert.Equal(t, "[ERROR] test\n", stderr.String())
 	}

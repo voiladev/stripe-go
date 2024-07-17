@@ -9,7 +9,7 @@ package stripe
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/stripe/stripe-go/v79/form"
+	"github.com/voiladev/stripe-go/v79/form"
 	"io"
 	"mime/multipart"
 	"net/url"

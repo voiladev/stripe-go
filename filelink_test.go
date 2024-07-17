@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	assert "github.com/stretchr/testify/require"
-	"github.com/stripe/stripe-go/v79/form"
+	"github.com/voiladev/stripe-go/v79/form"
 )
 
 func TestFileLinkParams_AppendTo(t *testing.T) {

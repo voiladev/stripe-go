@@ -17,9 +17,9 @@ import (
 	"testing"
 
 	assert "github.com/stretchr/testify/require"
-	stripe "github.com/stripe/stripe-go/v79"
-	"github.com/stripe/stripe-go/v79/form"
-	_ "github.com/stripe/stripe-go/v79/testing"
+	stripe "github.com/voiladev/stripe-go/v79"
+	"github.com/voiladev/stripe-go/v79/form"
+	_ "github.com/voiladev/stripe-go/v79/testing"
 )
 
 const (

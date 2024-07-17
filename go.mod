@@ -1,4 +1,4 @@
-module github.com/stripe/stripe-go/v79
+module github.com/voiladev/stripe-go/v79
 
 go 1.13
 

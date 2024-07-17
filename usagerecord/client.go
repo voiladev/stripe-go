@@ -10,7 +10,7 @@ package usagerecord
 import (
 	"net/http"
 
-	stripe "github.com/stripe/stripe-go/v79"
+	stripe "github.com/voiladev/stripe-go/v79"
 )
 
 // Client is used to invoke /subscription_items/{subscription_item}/usage_records APIs.

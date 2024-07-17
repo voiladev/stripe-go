@@ -1,6 +1,7 @@
 package stripe
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -77,14 +78,14 @@ type LeveledLogger struct {
 }
 
 // Debugf logs a debug message using Printf conventions.
-func (l *LeveledLogger) Debugf(format string, v ...interface{}) {
+func (l *LeveledLogger) Debugf(ctx context.Context, format string, v ...interface{}) {
 	if l.Level >= LevelDebug {
 		fmt.Fprintf(l.stdout(), "[DEBUG] "+format+"\n", v...)
 	}
 }
 
 // Errorf logs a warning message using Printf conventions.
-func (l *LeveledLogger) Errorf(format string, v ...interface{}) {
+func (l *LeveledLogger) Errorf(ctx context.Context, format string, v ...interface{}) {
 	// Infof logs a debug message using Printf conventions.
 	if l.Level >= LevelError {
 		fmt.Fprintf(l.stderr(), "[ERROR] "+format+"\n", v...)
@@ -92,14 +93,14 @@ func (l *LeveledLogger) Errorf(format string, v ...interface{}) {
 }
 
 // Infof logs an informational message using Printf conventions.
-func (l *LeveledLogger) Infof(format string, v ...interface{}) {
+func (l *LeveledLogger) Infof(ctx context.Context, format string, v ...interface{}) {
 	if l.Level >= LevelInfo {
 		fmt.Fprintf(l.stdout(), "[INFO] "+format+"\n", v...)
 	}
 }
 
 // Warnf logs a warning message using Printf conventions.
-func (l *LeveledLogger) Warnf(format string, v ...interface{}) {
+func (l *LeveledLogger) Warnf(ctx context.Context, format string, v ...interface{}) {
 	if l.Level >= LevelWarn {
 		fmt.Fprintf(l.stderr(), "[WARN] "+format+"\n", v...)
 	}
@@ -129,14 +130,14 @@ func (l *LeveledLogger) stdout() io.Writer {
 // other logging libraries that you use less standard conventions like Zap.
 type LeveledLoggerInterface interface {
 	// Debugf logs a debug message using Printf conventions.
-	Debugf(format string, v ...interface{})
+	Debugf(ctx context.Context, format string, v ...interface{})
 
 	// Errorf logs a warning message using Printf conventions.
-	Errorf(format string, v ...interface{})
+	Errorf(ctx context.Context, format string, v ...interface{})
 
 	// Infof logs an informational message using Printf conventions.
-	Infof(format string, v ...interface{})
+	Infof(ctx context.Context, format string, v ...interface{})
 
 	// Warnf logs a warning message using Printf conventions.
-	Warnf(format string, v ...interface{})
+	Warnf(ctx context.Context, format string, v ...interface{})
 }
